@@ -44,7 +44,7 @@ ISR(PCINT2_vect)
     switch (scanval)
     {
       case 0x5A: //Enter
-        Serial.println(" KULD!");
+        Serial.println(" ->");
         kuld = true;
         break;
       default:
@@ -122,26 +122,21 @@ void loop() {
 
     if (transmissionState == RADIOLIB_ERR_NONE) {
       // packet was successfully sent
-      Serial.println(F("transmission finished!"));
+      Serial.println(F("ok"));
 
       // NOTE: when using interrupt-driven transmit method,
       //       it is not possible to automatically measure
       //       transmission data rate using getDataRate()
 
     } else {
-      Serial.print(F("failed, code "));
+      Serial.print(F("failed"));
       Serial.println(transmissionState);
 
     }
-
-    // clean up after transmission is finished
-    // this will ensure transmitter is disabled,
-    // RF switch is powered down etc.
     radio.finishTransmit();
 
   }
   if (kuld == true) {
-    Serial.println("elkudve");
     transmissionState = radio.startTransmit(str);
     str = "";
     kuld = false;
