@@ -98,17 +98,18 @@ void setup() {
 
 // flag to indicate that a packet was sent
 volatile bool transmittedFlag = false;
+volatile bool receivedFlag = false;
 
-// this function is called when a complete packet
-// is transmitted by the module
-// IMPORTANT: this function MUST be 'void' type
-//            and MUST NOT have any arguments!
 #if defined(ESP8266) || defined(ESP32)
 ICACHE_RAM_ATTR
 #endif
+
 void setFlag(void) {
   // we sent a packet, set the flag
   transmittedFlag = true;
+}
+void setFlag2(void) {
+  receivedFlag = true;
 }
 
 // counter to keep track of transmitted packets
@@ -123,22 +124,66 @@ void loop() {
     if (transmissionState == RADIOLIB_ERR_NONE) {
       // packet was successfully sent
       Serial.println(F("ok"));
-
-      // NOTE: when using interrupt-driven transmit method,
-      //       it is not possible to automatically measure
-      //       transmission data rate using getDataRate()
-
     } else {
       Serial.print(F("failed"));
       Serial.println(transmissionState);
-
     }
     radio.finishTransmit();
-
+    radio.startReceive();
+    radio.setPacketReceivedAction(setFlag2);
   }
+
+
+  // check if the flag is set
+  if (receivedFlag) {
+    // reset flag
+    receivedFlag = false;
+
+    // you can read received data as an Arduino String
+    String str;
+    int state = radio.readData(str);
+
+    if (state == RADIOLIB_ERR_NONE) {
+      // packet was successfully received
+      Serial.println(F("[SX1278] Received packet!"));
+
+      // print data of the packet
+      Serial.print(F("[SX1278] Data:\t\t"));
+      Serial.println(str);
+
+      // print RSSI (Received Signal Strength Indicator)
+      Serial.print(F("[SX1278] RSSI:\t\t"));
+      Serial.print(radio.getRSSI());
+      Serial.println(F(" dBm"));
+
+      // print SNR (Signal-to-Noise Ratio)
+      Serial.print(F("[SX1278] SNR:\t\t"));
+      Serial.print(radio.getSNR());
+      Serial.println(F(" dB"));
+
+      // print frequency error
+      Serial.print(F("[SX1278] Frequency error:\t"));
+      Serial.print(radio.getFrequencyError());
+      Serial.println(F(" Hz"));
+
+    } else if (state == RADIOLIB_ERR_CRC_MISMATCH) {
+      // packet was received, but is malformed
+      Serial.println(F("[vesz] CRC error!"));
+
+    } else {
+      // some other error occurred
+      Serial.print(F("[vesz] Failed, code "));
+      Serial.println(state);
+
+    }
+  }
+
   if (kuld == true) {
+    radio.begin();
+    radio.setPacketSentAction(setFlag);
     transmissionState = radio.startTransmit(str);
     str = "";
     kuld = false;
   }
+  
 }
